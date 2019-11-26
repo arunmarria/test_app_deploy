@@ -6,7 +6,7 @@ import plotly.graph_objs as go
 from dash.dependencies import Input, Output
 import dash_table
 import plotly.express as px
-import dash_bootstrap_components as dbc
+#import dash_bootstrap_components as dbc
 import altair as alt
 
 
