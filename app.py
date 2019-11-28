@@ -99,8 +99,6 @@ df_google['inv_value'] = df_google['shares'] * df_google['price']
 google_inv_value0 = df_google['inv_value'][0]
 google_inv_value1 = df_google.iloc[-1]['inv_value']
 google_return = google_inv_value1 / google_inv_value0 - 1
-print('{:.2%}'.format(google_return))
-
 
 # Separate the dataframe to calculate investment return for Apple
 df_apple = df[df['symbol'] == "AAPL"].copy()
@@ -151,14 +149,8 @@ df['symbol'] = df['symbol'].str.replace('AAPL', 'Apple', regex = True)
 df = df.rename(columns = {"symbol": "company"})
 
 
-# trace_1 = go.Scatter(x = df.date, y = df[df.company == 'Microsoft']['inv_value'],
-                    
-#                     line = dict(width = 2,
-#                                 color = 'rgb(229, 151, 50)'))
 
-           
-
-
+# variables for plot on tab 2
 layout = go.Layout(title = 'Investment value change'
                    )
 
@@ -208,10 +200,12 @@ fig  = dict(
         ],
  layout = layout)
 
-dates = ['2000-01-01', '2001-01-01', '2002-01-01', '2003-01-01',
-         '2004-01-01', '2005-01-01', '2006-01-01', '2007-01-01',  
-         '2008-01-01', '2009-01-01', '2010-01-01']
-date_mark = date_mark = {i : dates[i] for i in range(0,11)}
+##variables for slider on tab 2
+dates = [
+         '2004-08-01', '2005-02-01', '2005-08-01', '2006-02-01', '2006-08-01',
+         '2007-02-01',  '2007-08-01','2008-02-01',  '2008-08-01','2009-02-01',  '2009-08-01',
+         '2010-02-01']
+date_mark = {i : dates[i] for i in range(0,12)}
 
 
 app.layout = html.Div([
@@ -221,12 +215,7 @@ app.layout = html.Div([
     dcc.Tabs(id="tabs", children=[
         # Defining the layout of the first Tab
         dcc.Tab(label='Stock Trends', children=[
-            html.Div([html.H1("Dataset Introduction", style={'textAlign': 'center'}),
-                dash_table.DataTable(
-                    id='table',
-                    columns=[{"name": i, "id": i} for i in df.columns],
-                    data=df.iloc[0:5,:].to_dict("rows"),
-                ),
+            html.Div([
                 html.H1("Price history", style={'textAlign': 'center'}),
                 # Adding the first dropdown menu and the subsequent time-series graph
                 dcc.Dropdown(id='my-dropdown',
@@ -235,37 +224,49 @@ app.layout = html.Div([
                                       {'label': 'Amazon', 'value': 'Amazon'}, 
                                       {'label': 'Microsoft','value': 'Microsoft'},
                                       {'label': 'Google','value': 'Google'}], 
-                             multi=True,value=['Apple'],
+                             multi=True,value=['Apple', 'IBM', 'Google'],
                              style={"display": "block", "margin-left": "auto", 
                                     "margin-right": "auto", "width": "60%"}),
-                dcc.Graph(id='history'),
+                dcc.Graph(id='history', 
+                          style={'height': 500,
+                                'width': '70%',
+                                "display": "block",
+                                "margin-left": "auto",
+                                "margin-right": "auto",}),
                 html.H1("Montly change", style={'textAlign': 'center'}),
                 
-                dcc.Graph(id='monthchange')
+                dcc.Graph(id='monthchange', 
+                          style={'width': '70%',
+                                "display": "block",
+                                "margin-left": "auto",
+                                "margin-right": "auto",
+                                'textAlign': 'center'})
             ], className="container"),
         ]),
         # Defining the layout of the second tab
         dcc.Tab(label='Investment Value/Return', children=[
             html.H1("Investment Value Change", 
                     style={"textAlign": "center"}),
-            
-            dcc.Graph(id = 'investment'),
+            # adding investment plot
+            dcc.Graph(id = 'investment', 
+                    style={'width': '75%',
+                                "display": "block",
+                                "margin-left": "auto",
+                                "margin-right": "auto",
+                                'textAlign': 'center'}),
             # range slider
                 html.P([
                     html.Label("Time Period"),
                     dcc.RangeSlider(id = 'slider',
                                     marks = date_mark,
                                     min = 0,
-                                    max = 10,
-                                    value = [3, 4]) 
-                        ], style = {'width' : '80%',
+                                    max = 11,
+                                    value = [0, 2]) 
+                        ], style = {'width' : '75%',
                                     'fontSize' : '20px',
                                     'padding-left' : '100px',
-                                    'display': 'inline-block'})
-                    
-                      
-        
-        ]),
+                                    'display': 'inline-block',}),
+        ])
         ])
     ])
 
@@ -297,10 +298,10 @@ def update_graph(selected_dropdown):
                                                        'step': 'year', 
                                                        'stepmode': 'backward'},
                                                       {'step': 'all'}])},
-                   'rangeslider': {'visible': True}, 'type': 'date'},
-             yaxis={"title":"Stock price (USD)"})}
+                   'rangeslider': {'visible': True}, 'type': 'date',
+                                   'range':['2007-04-01', '2009-01-01']},
+             yaxis={"title":"Stock price (USD)"},)}
     return figure
-
 
 @app.callback(Output('monthchange', 'figure'),
               [Input('my-dropdown', 'value')])
@@ -313,7 +314,6 @@ def update_graph(selected_dropdown_value):
     bins = [-999, 0, 999]
     labels = ['neg', 'pos']
     df2['labels'] = pd.cut(df2.monthly_return, bins=bins, labels=labels)
-    # trace = go.Bar(x=df2.date, y=df2.monthly_return)
 
     figure = px.bar(df2, x = 'date',
                         y = 'monthly_return',
@@ -322,20 +322,24 @@ def update_graph(selected_dropdown_value):
                         labels={'monthly_return':'Monthly Change %'},
                         category_orders={"company": trace1})
     
-    figure = figure.update_layout(height=400*len(trace1), 
+    figure = figure.update_layout(
+            height=400*len(trace1), 
             title_text=f"Monthly price change for {', '.join(str(dropdown[i]) for i in selected_dropdown_value)} Over Time",
             xaxis={"title":"Date",
-                   'rangeslider': {'visible': True}, 'type': 'date'},
+                   'rangeslider': {'visible': True}, 
+                   'type': 'date'},
             barmode='relative',
-            showlegend=False)
+            showlegend=False,
+            title_xanchor = 'auto')
     return figure
 
 
+## call back for slider on tab 2
 @app.callback(Output('investment', 'figure'),
              [Input('slider', 'value')])
 def update_figure(X):
     df2 = df[(df.date > dates[X[0]]) & (df.date < dates[X[1]])]
-
+    
     fig  = dict(
         data=[
             dict(
